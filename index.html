@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iTrade Signal Dashboard | Live Trading Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0b0e11;
+            --bg-card: #1e2329;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
+            --primary: #f0b90b; /* Màu vàng Binance */
+            --success: #2ebd85;
+            --danger: #f6465d;
+            --border: #363c4e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px 0;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 30px;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-card h3 { font-size: 12px; color: var(--text-muted); margin: 0 0 5px 0; text-transform: uppercase; }
+        .stat-card p { font-size: 18px; font-weight: bold; margin: 0; color: var(--primary); }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #2b3139;
+            color: var(--text-muted);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:hover { background: #2b3139; }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .buy { background: rgba(46, 189, 133, 0.2); color: var(--success); }
+        .sell { background: rgba(246, 70, 93, 0.2); color: var(--danger); }
+
+        .loading-bar {
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(to right, var(--primary), var(--bg-card));
+            display: none;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            th:nth-child(5), td:nth-child(5) { display: none; } /* Ẩn RSI trên mobile */
+            th:nth-child(6), td:nth-child(6) { display: none; } /* Ẩn Timeframe trên mobile */
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2 style="margin:0; color: var(--primary)">iTrade Signal v6</h2>
+    <p style="font-size: 12px; color: var(--text-muted); margin: 5px 0 0 0;">Hệ thống quét tín hiệu thuật toán thời gian thực</p>
+</header>
+
+<div id="loading" class="loading-bar"></div>
+
+<div class="container">
+    <div class="stats-bar">
+        <div class="stat-card">
+            <h3>Trạng thái</h3>
+            <p id="status">Đang kết nối...</p>
+        </div>
+        <div class="stat-card">
+            <h3>Tổng tín hiệu</h3>
+            <p id="total-count">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Cập nhật cuối</h3>
+            <p id="last-update">--:--:--</p>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>THỜI GIAN</th>
+                    <th>CẶP TIỀN</th>
+                    <th>LỆNH</th>
+                    <th>GIÁ</th>
+                    <th>RSI</th>
+                    <th>KHUNG</th>
+                </tr>
+            </thead>
+            <tbody id="signal-table">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<footer>
+    &copy; 2026 iTrade Software Solution. Powered by Strapi & GitHub.
+</footer>
+
+<script>
+    // URL API của Tú
+    const API_URL = 'https://api.itutrade.online/api/signals?sort=createdAt:desc&pagination[limit]=20';
+
+    async function fetchSignals() {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error('Network error');
+            
+            const json = await response.json();
+            const signals = json.data;
+
+            const tableBody = document.getElementById('signal-table');
+            tableBody.innerHTML = '';
+
+            signals.forEach(sig => {
+                const row = document.createElement('tr');
+                const time = new Date(sig.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' });
+                
+                row.innerHTML = `
+                    <td style="color: var(--text-muted)">${time}</td>
+                    <td style="font-weight:bold">${sig.symbol}</td>
+                    <td><span class="badge ${sig.side.toLowerCase()}">${sig.side}</span></td>
+                    <td style="color: var(--primary)">${sig.price.toLocaleString()}</td>
+                    <td>${sig.rsi ? sig.rsi.toFixed(2) : '--'}</td>
+                    <td><span style="color: var(--text-muted)">${sig.timeframe}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Update Stats
+            document.getElementById('total-count').innerText = signals.length;
+            document.getElementById('status').innerText = 'LIVE';
+            document.getElementById('status').style.color = 'var(--success)';
+            document.getElementById('last-update').innerText = new Date().toLocaleTimeString('vi-VN');
+
+        } catch (error) {
+            document.getElementById('status').innerText = 'ERROR';
+            document.getElementById('status').style.color = 'var(--danger)';
+            console.error('Fetch error:', error);
+        } finally {
+            setTimeout(() => { loading.style.display = 'none'; }, 500);
+        }
+    }
+
+    // Tự động fetch mỗi 15 giây
+    fetchSignals();
+    setInterval(fetchSignals, 15000);
+</script>
+
+</body>
+</html>

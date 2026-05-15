@@ -56,22 +56,22 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Đăng nhập thành công
-                messageDiv.innerHTML = "Đăng nhập thành công!";
-                messageDiv.className = "success";
-                
-                // Lưu JWT vào localStorage để sử dụng cho các API sau [cite: 815, 816]
-                localStorage.setItem('jwt', data.jwt);
-                localStorage.setItem('userData', JSON.stringify(data.user));
+    messageDiv.innerHTML = "Đăng nhập thành công! Đang chuyển hướng...";
+    messageDiv.className = "success";
+    
+    // 1. Lưu JWT và thông tin user vào trình duyệt
+    localStorage.setItem('jwt', data.jwt);
+    localStorage.setItem('userData', JSON.stringify(data.user));
 
-                console.log("Token của bạn:", data.jwt);
-                // Chuyển hướng sau 1s
-                // window.location.href = "/dashboard.html";
-            } else {
-                // Lỗi từ Strapi (Sai pass, user không tồn tại...)
-                messageDiv.innerHTML = "Lỗi: " + (data.error?.message || "Sai thông tin đăng nhập");
-                messageDiv.className = "error";
-            }
+    // 2. Lệnh "nhảy" trang sau 1 giây để user kịp thấy thông báo thành công
+    setTimeout(() => {
+        window.location.href = "dashboard.html"; 
+    }, 1000);
+
+} else {
+    messageDiv.innerHTML = "Lỗi: " + (data.error?.message || "Sai thông tin đăng nhập");
+    messageDiv.className = "error";
+}
         } catch (error) {
             // Lỗi kết nối hoặc CORS
             messageDiv.innerHTML = "Lỗi kết nối đến Server!";

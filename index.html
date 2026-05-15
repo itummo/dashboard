@@ -56,19 +56,22 @@
             const data = await response.json();
 
             if (response.ok) {
-    messageDiv.innerHTML = "Đăng nhập thành công! Đang chuyển hướng...";
-    messageDiv.className = "success";
-    
-    // 1. Lưu JWT và thông tin user vào trình duyệt
-    localStorage.setItem('jwt', data.jwt);
-    localStorage.setItem('userData', JSON.stringify(data.user));
-
-    // 2. Lệnh "nhảy" trang sau 1 giây để user kịp thấy thông báo thành công
-    setTimeout(() => {
-        window.location.href = "dashboard.html"; 
-    }, 1000);
-
-} else {
+                messageDiv.innerHTML = "Đăng nhập thành công! Đang chuyển hướng...";
+                messageDiv.className = "success";
+                
+                localStorage.setItem('jwt', data.jwt);
+                localStorage.setItem('userData', JSON.stringify(data.user));
+            
+                // Dùng cách này để an toàn hơn trên GitHub Pages
+                setTimeout(() => {
+                    // Lấy đường dẫn hiện tại và thay index.html bằng dashboard.html
+                    let currentPath = window.location.pathname;
+                    let newPath = currentPath.substring(0, currentPath.lastIndexOf('/')) + "/dashboard.html";
+                    window.location.href = newPath;
+                }, 1000);
+            
+            }
+            else {
     messageDiv.innerHTML = "Lỗi: " + (data.error?.message || "Sai thông tin đăng nhập");
     messageDiv.className = "error";
 }
